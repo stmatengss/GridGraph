@@ -2,7 +2,7 @@
     > File Name: kcores.cpp
     > Author: stmatengss
     > Mail: stmatengss@163.com 
-    > Created Time: 2017年01月04日 星期三 11时13分37秒
+    > Created Time:
  ************************************************************************/
 
 #include <iostream>
