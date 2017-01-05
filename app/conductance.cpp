@@ -1,5 +1,5 @@
 /*************************************************************************
-    > File Name: kcores.cpp
+    > File Name: conductance.cpp
     > Author: stmatengss
     > Mail: stmatengss@163.com 
     > Created Time:
