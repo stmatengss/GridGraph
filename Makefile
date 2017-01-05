@@ -3,7 +3,8 @@ ROOT_DIR= $(shell pwd)
 TARGETS= bin/preprocess bin/bfs bin/wcc bin/pagerank bin/spmv bin/mis bin/radii
 
 CXX?= g++
-CXXFLAGS?= -O3 -Wall -std=c++11 -g -fopenmp -I$(ROOT_DIR)
+#CXXFLAGS?= -O3 -Wall -std=c++11 -g -fopenmp -I$(ROOT_DIR)
+CXXFLAGS?= -O3 -w -std=c++11 -g -fopenmp -I$(ROOT_DIR)
 HEADERS= $(shell find . -name '*.hpp')
 
 all: $(TARGETS)
@@ -27,6 +28,9 @@ bin/mis: examples/mis.cpp $(HEADERS)
 	$(CXX) $(CXXFLAGS) -o $@ $< $(SYSLIBS)
 
 bin/radii: examples/radii.cpp $(HEADERS)
+	$(CXX) $(CXXFLAGS) -o $@ $< $(SYSLIBS)
+
+app/kcores: app/kcores.cpp $(HEADERS)
 	$(CXX) $(CXXFLAGS) -o $@ $< $(SYSLIBS)
 
 clean:

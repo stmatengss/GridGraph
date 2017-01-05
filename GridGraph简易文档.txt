@@ -1,0 +1,82 @@
+### BigVector定义了基于mmap的数组，具体实现在“core/bigvector.hpp”
+```c++
+BigVector<int> a("/data/a", 1048576); // 定义一个长度为1048576的int数组a，存储在文件“/data/a”并mmap到内存中访问
+
+a.fill(-1); // 把a中的所有元素赋值为-1
+
+a[1024] = 3; // 修改a[1024]的值为3
+```
+
+### 下面的这些方法通常情况下不需要使用
+```c++
+a.sync(); // 通过调用msync将内存中a的最新状态保存到文件中
+a.lock(0, 4096); // 使用mlock确保a[0..4096]会在内存中2而不会被操作系统swap到磁盘上
+a.unlock(0, 4096); // 对a[0..4096]使用munlock，如果此时内存紧张操作系统可以将这些内容swap出去
+a.load(0, 4096); // 不使用mmap而是手动管理（相应区间，例如此处的0..4096）文件到内存中数据的加载
+a.save(); // 将之前手动加载到内存中的数据保存到文件中，并释放相应的内存空间
+```
+
+### 一些可以调用的原子操作，具体实现在“core/atomic.hpp”
+```c++
+int x, y, z;
+bool ok;
+...
+ok = cas(&x, y, z); // 如果x==y，则将x赋值为z
+ok = write_min(&x, y); // 如果x<y，则将y赋值为x
+write_add(&x, y); // x+=y
+```
+
+### 获取当前时间，具体实现在“core/time.hpp”
+```c++
+double begin_time = get_time();
+...
+double end_time = get_time();
+double run_time = end_time - begin_time;
+```
+
+### Graph描述了使用2D方式划分后的图数据，具体实现在“core/graph.hpp”
+```c++
+Graph g("/data/twitter"); // 从“/data/twitter”加载已经预处理过的数据
+VertexId num_V = graph.vertices; // 获取|V|
+EdgeId num_E = graph.edges; // 获取|E|
+g.set_memory_bytes(4294967296); // 分配4GB内存给GridGraph使用
+g.set_vertex_data_bytes(num_V * sizeof(int)); // 告诉GridGraph程序需要操作的顶点数据的总大小
+```
+
+###
+```c++
+Bitmap * b = g.alloc_bitmap(); // 创建一个大小为|V|的bitmap，实现细节在“core/bitmap.hpp”
+b.clear(); // 清除所有bit位
+b.fill(); // 标记所有bit位
+b.set_bit(123); // 标记第123位bit
+if (b.get_bit(123)) ... // 如果第123位被标记，那么……
+```
+
+### 以下两个Graph类的方法用于描述计算过程，分别针对顶点和边进行操作（在已有的示例中，使用了C++11的lambda函数来简化代码的编写）
+
+```c++
+template <typename T>
+T stream_vertices( // 对所有bitmap中被标记的vertex调用process进行处理
+	std::function<T(VertexId)> process, // 返回值为T类型，参数为一个VertexID类型变量的自定义函数，该函数的返回值会被累加起来作为stream_vertices的返回值
+	Bitmap * bitmap = nullptr, // 用于标识哪些vertex处于active状态的bitmap，如果为默认的空指针则表示所有顶点都active
+	T zero = 0, // T类型的零值，通常情况下不需要修改
+	// 以下两个自定义函数通常情况下使用默认值即可，对于PageRank、SpMV等使用手动方式加载数据到内存可以提高性能的情况例外
+	std::function<void(std::pair<VertexId,VertexId>)> pre = f_none_1, // 参数为std::pair<VertexId,VertexId>，定义在处理某段区间的vertex前需要进行的操作，一般是调用相应BigVector的load方法
+	std::function<void(std::pair<VertexId,VertexId>)> post = f_none_1 // 参数为std::pair<VertexId,VertexId>，定义在处理某段区间的vertex后需要进行的操作，一般是调用相应BigVector的save方法
+);
+
+template <typename T>
+T stream_edges( // 对每条source处于active状态的边调用process进行处理
+	std::function<T(Edge&)> process, // 定义对于每条边需要进行的操作，该函数的返回值会被累加起来作为stream_edges的返回值，Edge结构的定义在“core/type.hpp”
+	Bitmap * bitmap = nullptr, // 用于标识哪些vertex处于active状态的bitmap，如果为默认的空指针则表示所有顶点都active，即需要处理所有边
+	T zero = 0, // T类型的零值，通常情况下不需要修改
+	int update_mode = 1, // 若process函数更新的是source对应的数据，则需要将这个参数设置为0
+	// 以下四个自定义函数通常情况下使用默认值即可，对于作业的这几个程序可以不使用
+	std::function<void(std::pair<VertexId,VertexId> vid_range)> pre_source_window = f_none_1,
+	std::function<void(std::pair<VertexId,VertexId> vid_range)> post_source_window = f_none_1,
+	std::function<void(std::pair<VertexId,VertexId> vid_range)> pre_target_window = f_none_1,
+	std::function<void(std::pair<VertexId,VertexId> vid_range)> post_target_window = f_none_1
+);
+```
+
+### 注意：在调用stream_edges前，需要使用hint方法告诉系统stream_edges中process需要修改（即执行写操作）的顶点数组，可以结合已有的例子体会其使用方式
