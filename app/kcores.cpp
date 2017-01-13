@@ -48,7 +48,7 @@ int main(int argc, char const *argv[])
         graph.hint(degree);
         // cal the degree
         graph.stream_edges<VertexId>([&](Edge& e) {
-            if (active_in->get_bit(e.target) && active_in->get_bit(e.source)) {
+            if (active_in->get_bit(e.target)) {
             //if (active_in->get_bit(e.target)) {
                 write_add(&degree[e.source], 1); 
                 write_add(&degree[e.target], 1); 
