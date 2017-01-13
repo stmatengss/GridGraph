@@ -57,7 +57,7 @@ int main(int argc, char const *argv[])
         }, active_in);
 
         need_del = graph.stream_vertices<VertexId>([&](VertexId i){
-            if (degree[i] <= k * 2 ) {
+            if (degree[i] <= k ) {
                 return 1;
             }
             active_out->set_bit(i);
